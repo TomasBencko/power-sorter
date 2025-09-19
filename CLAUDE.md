@@ -18,6 +18,19 @@ This is a simple Vue.js web app. It is a hobby project for my own needs, not a p
 - Each Vue file should start with `<template>` block following with a `<script setup lang='ts'>` and `<style scoped>` (if needed).
 - In case Pinia will be used, use the setup syntax.
 
+## Design & UX principles
+
+- The visual design should embody Apple's core design principles: simplicity, clarity, and elegance.
+- Responsive and accessible design from the start, semantic HTML
+- Clean, airy aesthetic – white backgrounds, gentle shades, no use of absolute black
+- Generous whitespace allowing elements ample breathing room for clarity and comfort
+- Bold display font's for titles
+- Clean visual hierarchy, thoughtful user focus guidance
+- Apple-inspired elegance, modern & bold style infused with its own vibrant personality
+- Commitment to Apple-like precision & UX polish; every pixel should feel intentional
+- Smooth and fluid interactions, gentle transitions as users navigate content, smooth scrolling
+- Subtle, purposeful on-scroll animations that enhance user experience without overwhelming the senses
+
 ## Universal development principles
 
 - Solid, reliable, sustainable and scalable foundations
