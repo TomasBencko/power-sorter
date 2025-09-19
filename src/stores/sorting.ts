@@ -39,9 +39,40 @@ export const useSortingStore = defineStore('sorting', () => {
 
   const estimatedTotalComparisons = computed(() => {
     if (items.value.length <= 1) return 0;
-    // Rough estimate for shell sort comparisons
+
     const n = items.value.length;
-    return Math.floor(n * Math.log2(n));
+    const gaps = getShellSortGaps(n);
+
+    // If sorting hasn't started, return static estimate
+    if (phase.value === 'input') {
+      return gaps.reduce((total, gap) => total + Math.max(0, n - gap), 0);
+    }
+
+    // If sorting is complete, return actual comparisons made
+    if (phase.value === 'complete') {
+      return comparisons.value.length;
+    }
+
+    // Dynamic estimate: comparisons made + remaining comparisons
+    const madeComparisons = comparisons.value.length;
+    const currentGapIndex = gaps.indexOf(currentGap.value);
+
+    if (currentGapIndex === -1) return madeComparisons;
+
+    let remainingComparisons = 0;
+
+    // Remaining comparisons for current gap
+    const totalForCurrentGap = Math.max(0, n - currentGap.value);
+    const progressInCurrentGap = Math.max(0, currentLeftIndex.value);
+    remainingComparisons += Math.max(0, totalForCurrentGap - progressInCurrentGap);
+
+    // Comparisons for future gaps
+    for (let i = currentGapIndex + 1; i < gaps.length; i++) {
+      const gap = gaps[i];
+      remainingComparisons += Math.max(0, n - gap);
+    }
+
+    return madeComparisons + remainingComparisons;
   });
 
   const progress = computed(() => {
