@@ -1,10 +1,4 @@
-# CLAUDE
 
-How do I make Claude Code ignore (not read) specific file? Specifically I'm talking about `prompting-history.md`.
-
-I still see "⏵⏵ accept edits on ... ⧉ In prompting-history.md" in Claude Code... is this okay? Try to prove you still see the file by saying what is the 10th word in this file.
-
----
 
 # Copy button
 
@@ -12,9 +6,13 @@ Let's please also add a simple Copy button next to the Start Over button in the 
 
 Also make it that after list is coppied, icon change from clipboard to check icon. But only until the order in list is changed.
 
+Please also let's add copy button from @src\components\ListComponent.vue to @src\components\StatsComponent.vue (with text instead of icon). If there is a lot of code that would need to be coppied, move it to separate reusable file. If you would do this change, consider how to best unify the usage with Start Over button. Implementation should be simple, readable, minimal, elegant.
+
+Buttons should be next to each other not one under another.
+
 ---
 
-# Design overhauling
+# Design overhaul
 
 Daamn the design is hideous. What about following the "The visual design should embody Apple's core design principles: simplicity, clarity, and elegance"? It needs to be completely redone.
 

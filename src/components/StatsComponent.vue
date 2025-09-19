@@ -9,15 +9,22 @@
 
     <p class="instruction-text">Click or use arrow keys</p>
 
-    <button v-if="totalItems > 0 && isFinished" @click="handleReset" class="reset-button">Start Over</button>
+    <div v-if="totalItems > 0 && isFinished" class="action-buttons">
+      <button @click="copyList" class="copy-button" :title="copyButtonTitle">
+        {{ isCopied ? 'Copied!' : 'Copy List' }}
+      </button>
+      <button @click="handleReset" class="reset-button">Start Over</button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
   import { computed } from 'vue';
   import { useSortingStore } from '../stores/sorting';
+  import { useCopyList } from '../composables/useCopyList';
 
   const sortingStore = useSortingStore();
+  const { isCopied, copyButtonTitle, copyList } = useCopyList();
 
   const totalItems = computed(() => sortingStore.items.length);
   const totalComparisons = computed(() => sortingStore.totalComparisons);
@@ -73,8 +80,15 @@
     text-align: center;
   }
 
-  .reset-button {
+  .action-buttons {
+    display: flex;
+    gap: 12px;
     margin-top: 16px;
+    justify-content: center;
+  }
+
+  .copy-button,
+  .reset-button {
     padding: 12px 24px;
     background-color: #f5f5f7;
     color: #1d1d1f;
@@ -82,9 +96,10 @@
     font-size: 15px;
     font-weight: 500;
     transition: background-color 0.2s ease;
-    align-self: center;
+    min-width: 120px;
   }
 
+  .copy-button:hover,
   .reset-button:hover {
     background-color: #e8e8ed;
   }

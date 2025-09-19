@@ -3,7 +3,7 @@
     <div class="list-header">
       <h3 class="list-title">Items</h3>
       <div v-if="totalItems > 0" class="header-buttons">
-        <button @click="handleCopy" class="icon-button copy-button" :title="copyButtonTitle">
+        <button @click="copyList" class="icon-button copy-button" :title="copyButtonTitle">
           {{ isCopied ? '✓' : '📋' }}
         </button>
         <button @click="handleReset" class="icon-button reset-button">↻</button>
@@ -33,17 +33,16 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref, watch } from 'vue';
+  import { computed } from 'vue';
   import { useSortingStore } from '../stores/sorting';
+  import { useCopyList } from '../composables/useCopyList';
 
   const sortingStore = useSortingStore();
+  const { isCopied, copyButtonTitle, copyList } = useCopyList();
 
   const items = computed(() => sortingStore.items);
   const currentComparison = computed(() => sortingStore.currentComparison);
   const totalItems = computed(() => sortingStore.items.length);
-  const copyButtonTitle = ref('Copy list to clipboard');
-  const isCopied = ref(false);
-  const lastCopiedOrder = ref<string[]>([]);
 
   function isItemHighlighted(itemId: string): boolean {
     return currentComparison.value?.left.id === itemId || currentComparison.value?.right.id === itemId;
@@ -54,49 +53,6 @@
       sortingStore.reset();
     }
   }
-
-  async function handleCopy() {
-    try {
-      const itemsText = items.value.map(item => item.text).join('\n');
-      await navigator.clipboard.writeText(itemsText);
-
-      // Set copied state
-      isCopied.value = true;
-      lastCopiedOrder.value = items.value.map(item => item.text);
-      copyButtonTitle.value = 'Copied!';
-
-      setTimeout(() => {
-        if (isCopied.value) {
-          copyButtonTitle.value = 'List copied to clipboard';
-        }
-      }, 2000);
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-      copyButtonTitle.value = 'Copy failed';
-      setTimeout(() => {
-        copyButtonTitle.value = 'Copy list to clipboard';
-      }, 2000);
-    }
-  }
-
-  // Watch for changes in list order and reset copied state
-  watch(
-    () => items.value.map(item => item.text),
-    (newOrder) => {
-      if (isCopied.value && lastCopiedOrder.value.length > 0) {
-        // Check if order has changed
-        const orderChanged = newOrder.length !== lastCopiedOrder.value.length ||
-                           newOrder.some((text, index) => text !== lastCopiedOrder.value[index]);
-
-        if (orderChanged) {
-          isCopied.value = false;
-          copyButtonTitle.value = 'Copy list to clipboard';
-          lastCopiedOrder.value = [];
-        }
-      }
-    },
-    { deep: true }
-  );
 </script>
 
 <style scoped>
@@ -125,7 +81,7 @@
 
   .header-buttons {
     display: flex;
-    gap: 8px;
+    gap: 12px;
   }
 
   .icon-button {
