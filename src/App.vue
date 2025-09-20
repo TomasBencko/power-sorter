@@ -105,6 +105,10 @@
       flex-direction: column;
     }
 
+    .sorting-phase .main-area {
+      order: -1;
+    }
+
     .sidebar {
       width: 100%;
       height: auto;

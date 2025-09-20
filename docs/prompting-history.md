@@ -1,5 +1,16 @@
 
 
+# 2025-09-20
+
+## 💎 [ShellSorting] Move pair comparisons to front on mobiles
+
+Please make it so that on mobile devices the pair comparisons goes first (above the list of items)
+
+## 📄 [Project] Update README
+
+Can you please explain the project briefly in @README.md ? Based on @src\stores\sorting.ts @src\App.vue @src\components\ComparisonComponent.vue @package.json @CLAUDE.md and maybe lines I have selected
+
+## 🐛 [ShellSorting] Fix Shell sort algorithm to properly bubble items to correct positions
 
 I'm afraid our current implementation of shell sorting algorithm is a bit flawed. It only approximates full sorting. Now it has just a fixed number of rounds based on number of items and each round does only single pass. For example n/2, n/4, n/8. But I think that if on some comparison an item moves higher, the algorithm should keep comparing him with higher items, until higher item wins a comparison. Not sure if I describe this in a best way possible, but I believe you understand my intention. When given randomly sorted numbers from 1 to 15, user needs to be able to sort them correctly. In current implementation they are approximately right, but not 100% (e.g. 3, 1, 4, 6, 5, 2, 7, 9, 8, 11, 12, 10, 13, 14, 15). Please think harder about this problem. Then fix the sorting process and also make sure the `estimatedTotalComparisons` is calculated accordingly.
 
@@ -23,7 +34,6 @@ I think that after sorting is complete the estimated number resets to original e
 
 Based on the sorting logic, can you confirm that user is never asked to compare same pair twice (regardless of which item is on the left and which on the right)? If that is the case, is the totalComparisons incrementing, and are the items from pair reorganized in list with transition animations (if order is changing)? Both should be true. Think about this.
 
----
 
 ## ✨ [ShellSorting] Add copy button on finished state
 
@@ -35,7 +45,6 @@ Please also let's add copy button from @src\components\ListComponent.vue to @src
 
 Buttons should be next to each other not one under another.
 
----
 
 ## ✨ [ShellSorting] Implement core functionality of shell sorting
 
@@ -72,6 +81,5 @@ Well now this is MUCH better. So only some smaller things to itterate:
 Please add simple transition animations when changing colors to green / red at reordering.
 Please make it in the list of items that the text is never wrapped but ended with ellipsis
 
----
 
 ## 🔧 [Project] Scaffold new Vue.js app
