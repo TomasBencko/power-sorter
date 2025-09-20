@@ -30,6 +30,9 @@ export const useSortingStore = defineStore('sorting', () => {
   const currentRightIndex = ref<number>(0);
   const isFinished = ref<boolean>(false);
   const roundsCompleted = ref<number>(0);
+  const currentInsertionIndex = ref<number>(0); // Which element we're currently positioning
+  const currentComparisonIndex = ref<number>(0); // Where in the backward comparison sequence we are
+  const smoothedEstimate = ref<number>(0); // Smoothed estimate to prevent abrupt jumps
 
   // Phase management
   const phase = ref<'input' | 'sorting' | 'complete'>('input');
@@ -43,9 +46,15 @@ export const useSortingStore = defineStore('sorting', () => {
     const n = items.value.length;
     const gaps = getShellSortGaps(n);
 
-    // If sorting hasn't started, return static estimate
+    // If sorting hasn't started, return static estimate and initialize smoothed value
     if (phase.value === 'input') {
-      return gaps.reduce((total, gap) => total + Math.max(0, n - gap), 0);
+      const estimate = gaps.reduce((total, gap) => {
+        const elementsToSort = Math.max(0, n - gap);
+        const avgComparisonsPerElement = Math.max(1, Math.log2(gap));
+        return total + elementsToSort * avgComparisonsPerElement;
+      }, 0);
+      smoothedEstimate.value = estimate;
+      return estimate;
     }
 
     // If sorting is complete, return actual comparisons made
@@ -53,26 +62,58 @@ export const useSortingStore = defineStore('sorting', () => {
       return comparisons.value.length;
     }
 
-    // Dynamic estimate: comparisons made + remaining comparisons
+    // Calculate raw estimate
     const madeComparisons = comparisons.value.length;
     const currentGapIndex = gaps.indexOf(currentGap.value);
 
     if (currentGapIndex === -1) return madeComparisons;
 
+    // Calculate progress within current gap
+    const elementsInCurrentGap = Math.max(0, n - currentGap.value);
+    const elementsCompleted = Math.max(0, currentInsertionIndex.value - currentGap.value);
+
+    // Use a more conservative efficiency estimate to reduce volatility
+    const totalElementsProcessed = roundsCompleted.value * n + elementsCompleted;
+    const baseEfficiency = 1.5; // Conservative base
+    const actualEfficiency = totalElementsProcessed > 0 ? madeComparisons / totalElementsProcessed : baseEfficiency;
+    const comparisonsPerElement = Math.max(baseEfficiency, Math.min(actualEfficiency, baseEfficiency * 2));
+
     let remainingComparisons = 0;
 
     // Remaining comparisons for current gap
-    const totalForCurrentGap = Math.max(0, n - currentGap.value);
-    const progressInCurrentGap = Math.max(0, currentLeftIndex.value);
-    remainingComparisons += Math.max(0, totalForCurrentGap - progressInCurrentGap);
+    const remainingElementsInGap = Math.max(0, elementsInCurrentGap - elementsCompleted);
+    remainingComparisons += remainingElementsInGap * comparisonsPerElement;
 
-    // Comparisons for future gaps
+    // Comparisons for future gaps (use conservative estimate)
     for (let i = currentGapIndex + 1; i < gaps.length; i++) {
       const gap = gaps[i];
-      remainingComparisons += Math.max(0, n - gap);
+      const elementsToSort = Math.max(0, n - gap);
+      const avgComparisonsPerElement = Math.max(1, Math.log2(gap) * 0.8); // Slightly more conservative
+      remainingComparisons += elementsToSort * avgComparisonsPerElement;
     }
 
-    return madeComparisons + remainingComparisons;
+    const rawEstimate = madeComparisons + remainingComparisons;
+
+    // Apply smoothing to prevent abrupt changes
+    const smoothingFactor = 0.3; // How quickly to adapt (0.1 = very smooth, 0.5 = more responsive)
+    const maxChangePercent = 0.15; // Maximum 15% change per update
+
+    if (smoothedEstimate.value === 0) {
+      smoothedEstimate.value = rawEstimate;
+    } else {
+      // Calculate the maximum allowed change
+      const maxChange = smoothedEstimate.value * maxChangePercent;
+      const proposedChange = rawEstimate - smoothedEstimate.value;
+
+      // Cap the change to prevent jumps
+      const cappedChange = Math.sign(proposedChange) * Math.min(Math.abs(proposedChange), maxChange);
+      const targetEstimate = smoothedEstimate.value + cappedChange;
+
+      // Apply exponential smoothing
+      smoothedEstimate.value = smoothedEstimate.value + smoothingFactor * (targetEstimate - smoothedEstimate.value);
+    }
+
+    return Math.round(smoothedEstimate.value);
   });
 
   const progress = computed(() => {
@@ -83,16 +124,16 @@ export const useSortingStore = defineStore('sorting', () => {
   const currentComparison = computed((): CurrentComparison | null => {
     if (phase.value !== 'sorting' || isFinished.value) return null;
 
-    const leftItem = items.value[currentLeftIndex.value];
-    const rightItem = items.value[currentRightIndex.value];
+    const leftItem = items.value[currentComparisonIndex.value];
+    const rightItem = items.value[currentInsertionIndex.value];
 
     if (!leftItem || !rightItem) return null;
 
     return {
       left: leftItem,
       right: rightItem,
-      leftIndex: currentLeftIndex.value,
-      rightIndex: currentRightIndex.value,
+      leftIndex: currentComparisonIndex.value,
+      rightIndex: currentInsertionIndex.value,
     };
   });
 
@@ -137,6 +178,9 @@ export const useSortingStore = defineStore('sorting', () => {
     currentGap.value = 0;
     currentLeftIndex.value = 0;
     currentRightIndex.value = 0;
+    currentInsertionIndex.value = 0;
+    currentComparisonIndex.value = 0;
+    smoothedEstimate.value = 0;
     isFinished.value = false;
     roundsCompleted.value = 0;
 
@@ -157,8 +201,8 @@ export const useSortingStore = defineStore('sorting', () => {
     }
 
     currentGap.value = gaps[0];
-    currentLeftIndex.value = 0;
-    currentRightIndex.value = currentGap.value;
+    currentInsertionIndex.value = currentGap.value; // Start with first element that needs positioning
+    currentComparisonIndex.value = 0; // Will be set in findNextComparison
 
     findNextComparison();
   }
@@ -170,31 +214,49 @@ export const useSortingStore = defineStore('sorting', () => {
     while (gapIndex < gaps.length) {
       const gap = gaps[gapIndex];
 
-      for (let i = currentLeftIndex.value; i < items.value.length - gap; i++) {
-        const leftItem = items.value[i];
-        const rightItem = items.value[i + gap];
+      // Continue with current element if we're in the middle of positioning it
+      while (currentInsertionIndex.value < items.value.length) {
+        const elementToPosition = items.value[currentInsertionIndex.value];
 
-        const existingComparison = hasComparison(leftItem.id, rightItem.id);
+        // Find where to compare this element backward in the gap sequence
+        let compareIndex = currentInsertionIndex.value - gap;
 
-        if (!existingComparison) {
-          currentGap.value = gap;
-          currentLeftIndex.value = i;
-          currentRightIndex.value = i + gap;
-          return;
-        } else {
-          // Use existing comparison result
-          if (existingComparison.winnerId === rightItem.id) {
-            // Right item wins, swap them
-            swapItems(i, i + gap);
+        // Find the next comparison position for this element
+        while (compareIndex >= 0) {
+          const compareItem = items.value[compareIndex];
+          const existingComparison = hasComparison(compareItem.id, elementToPosition.id);
+
+          if (!existingComparison) {
+            // We found a comparison we need to make
+            currentComparisonIndex.value = compareIndex;
+            return;
+          } else {
+            // Use existing comparison result
+            if (existingComparison.winnerId === elementToPosition.id) {
+              // Element we're positioning wins, so it should move further back
+              swapItems(compareIndex, currentInsertionIndex.value);
+              // Update currentInsertionIndex since the element moved
+              currentInsertionIndex.value = compareIndex;
+            } else {
+              // Element we're positioning loses, so it has found its position
+              break;
+            }
           }
+
+          compareIndex -= gap;
         }
+
+        // This element is now in its correct position for this gap
+        // Move to next element
+        currentInsertionIndex.value++;
       }
 
-      // Move to next gap
+      // All elements for this gap are positioned, move to next gap
       gapIndex++;
       if (gapIndex < gaps.length) {
         roundsCompleted.value++;
-        currentLeftIndex.value = 0;
+        currentGap.value = gaps[gapIndex];
+        currentInsertionIndex.value = currentGap.value; // Start with first element that needs positioning
       }
     }
 
@@ -233,16 +295,14 @@ export const useSortingStore = defineStore('sorting', () => {
       winnerId,
     });
 
-    // If right item wins, swap them
+    // If the element we're positioning (right item) wins, swap them
     if (winnerId === comparison.right.id) {
       swapItems(comparison.leftIndex, comparison.rightIndex);
+      // Update currentInsertionIndex since the element moved
+      currentInsertionIndex.value = comparison.leftIndex;
     }
 
-    // Move to next comparison within current gap
-    currentLeftIndex.value++;
-    currentRightIndex.value = currentLeftIndex.value + currentGap.value;
-
-    // Find next comparison or move to next gap
+    // Find next comparison
     findNextComparison();
   }
 
@@ -257,6 +317,9 @@ export const useSortingStore = defineStore('sorting', () => {
     currentGap.value = 0;
     currentLeftIndex.value = 0;
     currentRightIndex.value = 0;
+    currentInsertionIndex.value = 0;
+    currentComparisonIndex.value = 0;
+    smoothedEstimate.value = 0;
     isFinished.value = false;
     roundsCompleted.value = 0;
     phase.value = 'input';

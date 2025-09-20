@@ -1,5 +1,14 @@
 
 
+
+I'm afraid our current implementation of shell sorting algorithm is a bit flawed. It only approximates full sorting. Now it has just a fixed number of rounds based on number of items and each round does only single pass. For example n/2, n/4, n/8. But I think that if on some comparison an item moves higher, the algorithm should keep comparing him with higher items, until higher item wins a comparison. Not sure if I describe this in a best way possible, but I believe you understand my intention. When given randomly sorted numbers from 1 to 15, user needs to be able to sort them correctly. In current implementation they are approximately right, but not 100% (e.g. 3, 1, 4, 6, 5, 2, 7, 9, 8, 11, 12, 10, 13, 14, 15). Please think harder about this problem. Then fix the sorting process and also make sure the `estimatedTotalComparisons` is calculated accordingly.
+
+...
+
+One minor thing to polish... the `estimatedTotalComparisons` tends to jump quite abruptly. E.g. from 30 to 50 after ranking single item to go higher. Can something be done about this? One idea I have is to keep list of previous estimates and return an average of the numbers. But that's just some first plan idea, maybe you cant think out something better.
+
+---
+
 # 2025-09-19
 
 ## ✨ [ShellSorting] Improve comparison estimates
