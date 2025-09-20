@@ -1,18 +1,35 @@
-# .
+# Power Sorter
 
-This template should help get you started developing with Vue 3 in Vite.
+A Vue.js web application that allows users to efficiently sort lists of items using human judgment and a shell sorting algorithm.
 
-## Recommended IDE Setup
+## What It Does
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+Power Sorter takes a list of text items (phrases, words, ideas, etc.) and helps you sort them from best to worst through strategic pairwise comparisons. Instead of requiring you to compare every item with every other item, it uses an optimized shell sorting approach that minimizes the number of comparisons needed.
 
-## Type Support for `.vue` Imports in TS
+### How It Works
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+1. **Input Phase**: Enter your list of items, one per line
+2. **Sorting Phase**: The app presents pairs of items for you to compare, asking "Which should rank higher?"
+3. **Smart Algorithm**: Uses shell sorting gaps (N/2, N/4, ..., 1) to minimize total comparisons
+4. **Visual Feedback**: See your list update in real-time with smooth animations as items move
+5. **Progress Tracking**: Monitor sorting progress with statistics and estimates
 
-## Customize configuration
+### Key Features
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+- **Efficient Sorting**: Shell sorting algorithm reduces comparison overhead
+- **Keyboard Navigation**: Use arrow keys (← →) for quick comparisons
+- **Live Updates**: Watch your list reorganize with smooth animations
+- **Progress Stats**: Track comparisons made, rounds completed, and estimated remaining work
+- **Responsive Design**: Works on desktop and mobile devices
+- **Apple-Inspired UI**: Clean, elegant interface following Apple design principles
+
+## Technical Stack
+
+- **Vue 3** with Composition API and TypeScript
+- **Pinia** for state management
+- **Vite** for development and building
+- **Vitest** for testing
+- **ESLint + Prettier** for code quality
 
 ## Project Setup
 
