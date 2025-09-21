@@ -7,7 +7,12 @@
       </div>
     </div>
 
-    <p class="instruction-text">Click or use arrow keys</p>
+    <div v-if="elapsedTime > 0" class="timing-section">
+      <div v-if="isFinished" class="time-label">Total time: {{ formatTime(elapsedTime) }}</div>
+      <div v-else-if="estimatedTimeRemaining !== null" class="time-label time-estimate">
+        ~{{ formatTime(estimatedTimeRemaining) }} remaining
+      </div>
+    </div>
 
     <div v-if="totalItems > 0 && isFinished" class="action-buttons">
       <button @click="copyList" class="copy-button" :title="copyButtonTitle">
@@ -31,6 +36,17 @@
   const estimatedTotalComparisons = computed(() => sortingStore.estimatedTotalComparisons);
   const progress = computed(() => sortingStore.progress);
   const isFinished = computed(() => sortingStore.isFinished);
+  const elapsedTime = computed(() => sortingStore.elapsedTime);
+  const estimatedTimeRemaining = computed(() => sortingStore.estimatedTimeRemaining);
+
+  function formatTime(seconds: number): string {
+    if (seconds < 60) {
+      return `${seconds}s`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+  }
 
   function handleReset() {
     if (confirm('Start over? All progress will be lost.')) {
@@ -74,7 +90,13 @@
     border-radius: 2px;
   }
 
-  .instruction-text {
+  .timing-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .time-label {
     font-size: 15px;
     color: #86868b;
     text-align: center;

@@ -2,6 +2,14 @@
 
 # 2025-09-20
 
+## ✨ [ShellSorting] Add elapsed time tracking and completion time estimation
+
+Let's please extend the Stats with a value of total time passed and a realistic time estimate for finishing the sorting which would keep updating. After sorting is done, only show the total time it took to sort the list.
+
+---
+
+# 2025-09-20
+
 ## 💎 [ShellSorting] Move pair comparisons to front on mobiles
 
 Please make it so that on mobile devices the pair comparisons goes first (above the list of items)

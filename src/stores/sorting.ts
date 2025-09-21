@@ -34,6 +34,16 @@ export const useSortingStore = defineStore('sorting', () => {
   const currentComparisonIndex = ref<number>(0); // Where in the backward comparison sequence we are
   const smoothedEstimate = ref<number>(0); // Smoothed estimate to prevent abrupt jumps
 
+  // Timing state
+  const sortingStartTime = ref<number | null>(null);
+  const sortingEndTime = ref<number | null>(null);
+  const lastComparisonTime = ref<number>(0);
+  const comparisonsTimeHistory = ref<number[]>([]);
+  const currentTime = ref<number>(Date.now());
+
+  // Update current time every second to make elapsed time reactive
+  let timeInterval: number | null = null;
+
   // Phase management
   const phase = ref<'input' | 'sorting' | 'complete'>('input');
 
@@ -121,6 +131,28 @@ export const useSortingStore = defineStore('sorting', () => {
     return Math.min(100, (totalComparisons.value / estimatedTotalComparisons.value) * 100);
   });
 
+  const elapsedTime = computed(() => {
+    if (!sortingStartTime.value) return 0;
+    const endTime = sortingEndTime.value || currentTime.value;
+    return Math.floor((endTime - sortingStartTime.value) / 1000);
+  });
+
+  const estimatedTimeRemaining = computed(() => {
+    if (phase.value !== 'sorting' || !sortingStartTime.value || totalComparisons.value === 0) return null;
+
+    // Use recent comparisons to estimate time per comparison
+    const recentComparisons = Math.min(10, comparisonsTimeHistory.value.length);
+    if (recentComparisons < 3) return null;
+
+    const recentTimes = comparisonsTimeHistory.value.slice(-recentComparisons);
+    const avgTimePerComparison = recentTimes.reduce((sum, time) => sum + time, 0) / recentTimes.length;
+
+    const remainingComparisons = Math.max(0, estimatedTotalComparisons.value - totalComparisons.value);
+    const estimatedSeconds = Math.floor((remainingComparisons * avgTimePerComparison) / 1000);
+
+    return estimatedSeconds;
+  });
+
   const currentComparison = computed((): CurrentComparison | null => {
     if (phase.value !== 'sorting' || isFinished.value) return null;
 
@@ -140,6 +172,20 @@ export const useSortingStore = defineStore('sorting', () => {
   // Helper functions
   function generateId(): string {
     return Math.random().toString(36).substr(2, 9);
+  }
+
+  function startTimer(): void {
+    if (timeInterval) clearInterval(timeInterval);
+    timeInterval = setInterval(() => {
+      currentTime.value = Date.now();
+    }, 1000);
+  }
+
+  function stopTimer(): void {
+    if (timeInterval) {
+      clearInterval(timeInterval);
+      timeInterval = null;
+    }
   }
 
   function hasComparison(leftId: string, rightId: string): Comparison | null {
@@ -189,6 +235,12 @@ export const useSortingStore = defineStore('sorting', () => {
       isFinished.value = true;
     } else {
       phase.value = 'sorting';
+      // Start timing when we enter sorting phase
+      const now = Date.now();
+      sortingStartTime.value = now;
+      lastComparisonTime.value = now;
+      currentTime.value = now;
+      startTimer();
       startSorting();
     }
   }
@@ -288,6 +340,27 @@ export const useSortingStore = defineStore('sorting', () => {
     const comparison = currentComparison.value;
     if (!comparison) return;
 
+    // Initialize timing if we're in a session that started before timing was added
+    if (!sortingStartTime.value && phase.value === 'sorting') {
+      const estimatedStartTime = Date.now() - (comparisons.value.length * 3000);
+      sortingStartTime.value = estimatedStartTime;
+      lastComparisonTime.value = Date.now() - 3000;
+      currentTime.value = Date.now();
+      startTimer();
+    }
+
+    // Track timing for this comparison
+    const now = Date.now();
+    const timeSinceLastComparison = now - lastComparisonTime.value;
+    comparisonsTimeHistory.value.push(timeSinceLastComparison);
+
+    // Keep only recent history (last 20 comparisons)
+    if (comparisonsTimeHistory.value.length > 20) {
+      comparisonsTimeHistory.value.shift();
+    }
+
+    lastComparisonTime.value = now;
+
     // Record the comparison
     comparisons.value.push({
       leftId: comparison.left.id,
@@ -307,11 +380,15 @@ export const useSortingStore = defineStore('sorting', () => {
   }
 
   function finishSorting(): void {
+    // Record end time
+    sortingEndTime.value = Date.now();
+    stopTimer();
     isFinished.value = true;
     phase.value = 'complete';
   }
 
   function reset(): void {
+    stopTimer();
     items.value = [];
     comparisons.value = [];
     currentGap.value = 0;
@@ -323,6 +400,13 @@ export const useSortingStore = defineStore('sorting', () => {
     isFinished.value = false;
     roundsCompleted.value = 0;
     phase.value = 'input';
+
+    // Reset timing state
+    sortingStartTime.value = null;
+    sortingEndTime.value = null;
+    lastComparisonTime.value = 0;
+    comparisonsTimeHistory.value = [];
+    currentTime.value = Date.now();
   }
 
   return {
@@ -338,6 +422,8 @@ export const useSortingStore = defineStore('sorting', () => {
     estimatedTotalComparisons,
     progress,
     currentComparison,
+    elapsedTime,
+    estimatedTimeRemaining,
 
     // Actions
     initializeItems,
